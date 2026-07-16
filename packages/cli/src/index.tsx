@@ -1,7 +1,7 @@
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 import { Header } from "./components/header";
-import { StatusBar } from "./components/status-bar";
+import { InputBar } from "./components/input-bar";
 
 function App() {
   return (
@@ -13,8 +13,8 @@ function App() {
       <box flexGrow={1} alignItems="center" justifyContent="center" gap={2}>
         <Header />
       </box>
-      <box paddingLeft={1}>
-        <StatusBar />
+      <box paddingX={1} paddingBottom={0}>
+        <InputBar />
       </box>
     </box>
   );
