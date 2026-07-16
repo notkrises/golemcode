@@ -2,10 +2,11 @@ import type { Command } from "./types";
 
 export const MODELS = ["claude-sonnet-5", "claude-opus-4-8", "gpt-5.4"];
 
+// shade = the darker companion color used for the header's ascii-art shadow.
 export const ACCENTS = [
-  { name: "Violet", color: "#A855F7" },
-  { name: "Cyan", color: "#22D3EE" },
-  { name: "Mono", color: "#F4F4F5" },
+  { name: "Violet", color: "#A855F7", shade: "#6B21A8" },
+  { name: "Cyan", color: "#22D3EE", shade: "#0E7490" },
+  { name: "Mono", color: "#F4F4F5", shade: "#71717A" },
 ];
 
 export const COMMANDS: Command[] = [

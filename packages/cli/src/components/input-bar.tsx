@@ -4,7 +4,7 @@ import { useKeyboard, useRenderer } from "@opentui/react";
 import { EmptyBorder } from "./border";
 import { StatusBar, PLAN_COLOR } from "./status-bar";
 import { CommandMenu } from "./command-menu";
-import { MODELS, ACCENTS } from "./command-menu/commands";
+import { MODELS } from "./command-menu/commands";
 import type { Command, ModeType } from "./command-menu/types";
 import { useCommandMenu } from "./command-menu/use-command-menu";
 
@@ -23,14 +23,15 @@ const TOAST_MS_PER_CHAR = 60;
 type Props = {
   onSubmit: (text: string) => void;
   disabled?: boolean;
+  accent: string;
+  onAccentChange: (color: string) => void;
 };
 
-export function InputBar({ onSubmit, disabled = false }: Props) {
+export function InputBar({ onSubmit, disabled = false, accent, onAccentChange }: Props) {
   // Ref = a direct handle to the textarea, for reading/clearing its text.
   const textareaRef = useRef<TextareaRenderable>(null);
   const [mode, setMode] = useState<ModeType>("Build");
   const [model, setModel] = useState(MODELS[0]!);
-  const [accent, setAccent] = useState(ACCENTS[0]!.color);
   const renderer = useRenderer();
 
   // Toast: a short-lived message in the status row. The ref remembers the
@@ -110,7 +111,7 @@ export function InputBar({ onSubmit, disabled = false }: Props) {
         model,
         setModel,
         accent,
-        setAccent,
+        setAccent: onAccentChange,
         toast: showToast,
       });
     } else {
