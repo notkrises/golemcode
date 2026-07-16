@@ -1,8 +1,11 @@
 import { useRef, useState } from "react";
 import type { KeyBinding, TextareaRenderable } from "@opentui/core";
-import { useKeyboard } from "@opentui/react";
+import { useKeyboard, useRenderer } from "@opentui/react";
 import { EmptyBorder } from "./border";
 import { StatusBar } from "./status-bar";
+import { CommandMenu } from "./command-menu";
+import type { Command, ModeType } from "./command-menu/types";
+import { useCommandMenu } from "./command-menu/use-command-menu";
 
 // A textarea inserts a newline on Enter by default. These bindings flip that:
 // plain Enter submits, Shift+Enter makes a newline.
@@ -16,7 +19,18 @@ export const TEXTAREA_KEY_BINDINGS: KeyBinding[] = [
 export function InputBar() {
   // Ref = a direct handle to the textarea, for reading/clearing its text.
   const textareaRef = useRef<TextareaRenderable>(null);
-  const [mode, setMode] = useState<"Build" | "Plan">("Build");
+  const [mode, setMode] = useState<ModeType>("Build");
+  const renderer = useRenderer();
+
+  const {
+    showCommandMenu,
+    commandQuery,
+    selectedIndex,
+    scrollRef,
+    handleContentChange,
+    resolveCommand,
+    setSelectedIndex,
+  } = useCommandMenu();
 
   // Global key listener: Tab toggles the mode (preventDefault stops the
   // tab character from also being typed into the textarea).
@@ -26,6 +40,38 @@ export function InputBar() {
       setMode((current) => (current === "Build" ? "Plan" : "Build"));
     }
   });
+
+  // The textarea's onContentChange event carries no text — read it from the ref.
+  const handleTextareaContentChange = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    handleContentChange(textarea.plainText);
+  };
+
+  const handleCommand = (command: Command | undefined) => {
+    const textarea = textareaRef.current;
+    if (!textarea || !command) return;
+
+    textarea.setText("");
+
+    if (command.action) {
+      command.action({
+        exit: () => renderer.destroy(),
+        // No router yet — /new will navigate to a fresh session later.
+        navigate: () => {},
+        mode,
+        setMode,
+        // No model registry yet — /models will use this later.
+        setModel: () => {},
+      });
+    } else {
+      textarea.insertText(command.value + " ");
+    }
+  };
+
+  const handleCommandExecute = (index: number) => {
+    handleCommand(resolveCommand(index));
+  };
 
   const handleSubmit = () => {
     const textarea = textareaRef.current;
@@ -38,6 +84,16 @@ export function InputBar() {
     textarea.setText("");
   };
 
+  // Enter means "run the highlighted command" while the menu is open,
+  // and "submit the prompt" otherwise.
+  const handleTextareaSubmit = () => {
+    if (showCommandMenu) {
+      handleCommand(resolveCommand(selectedIndex));
+      return;
+    }
+    handleSubmit();
+  };
+
   return (
     <box flexDirection="column">
       <box
@@ -47,17 +103,37 @@ export function InputBar() {
         width="100%"
       >
         <box
+          position="relative"
           justifyContent="center"
           paddingX={2}
           paddingY={1}
           backgroundColor="#16151D"
           width="100%"
         >
+          {showCommandMenu && (
+            <box
+              position="absolute"
+              bottom="100%"
+              left={0}
+              width="100%"
+              backgroundColor="#16151D"
+              zIndex={10}
+            >
+              <CommandMenu
+                query={commandQuery}
+                selectedIndex={selectedIndex}
+                scrollRef={scrollRef}
+                onSelect={setSelectedIndex}
+                onExecute={handleCommandExecute}
+              />
+            </box>
+          )}
           <textarea
             ref={textareaRef}
             focused
             keyBindings={TEXTAREA_KEY_BINDINGS}
-            onSubmit={handleSubmit}
+            onSubmit={handleTextareaSubmit}
+            onContentChange={handleTextareaContentChange}
             placeholder="Ask GolemCode anything…"
             placeholderColor="#6E6A7A"
             textColor="#F4F4F5"
