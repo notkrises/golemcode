@@ -14,11 +14,14 @@ function App() {
         <Header />
       </box>
       <box paddingX={1} paddingBottom={0}>
-        <InputBar />
+        <InputBar onSubmit={() => {}} />
       </box>
     </box>
   );
 }
 
-const renderer = await createCliRenderer();
+const renderer = await createCliRenderer({
+  targetFps: 60,
+  exitOnCtrlC: false,
+});
 createRoot(renderer).render(<App />);

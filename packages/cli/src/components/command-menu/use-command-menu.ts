@@ -60,6 +60,19 @@ export function useCommandMenu(): UseCommandMenuReturn {
     return command;
   };
 
+  // Scroll the list so a given row is on screen, whichever direction it
+  // drifted off — the user may have wheel-scrolled between keypresses.
+  const ensureVisible = (index: number) => {
+    const sb = scrollRef.current;
+    if (!sb) return;
+    const viewportHeight = sb.viewport.height;
+    if (index < sb.scrollTop) {
+      sb.scrollTo(index);
+    } else if (index > sb.scrollTop + viewportHeight - 1) {
+      sb.scrollTo(index - viewportHeight + 1);
+    }
+  };
+
   // Arrow keys move the selection; the list scrolls along when the
   // highlight goes off-screen. Escape closes the menu.
   useKeyboard((key) => {
@@ -72,10 +85,7 @@ export function useCommandMenu(): UseCommandMenuReturn {
       key.preventDefault();
       setSelectedIndex((i) => {
         const newIndex = Math.max(0, i - 1);
-        const sb = scrollRef.current;
-        if (sb && newIndex < sb.scrollTop) {
-          sb.scrollTo(newIndex);
-        }
+        ensureVisible(newIndex);
         return newIndex;
       });
     } else if (key.name === "down") {
@@ -86,14 +96,7 @@ export function useCommandMenu(): UseCommandMenuReturn {
         }
 
         const newIndex = Math.min(filteredCommands.length - 1, i + 1);
-        const sb = scrollRef.current;
-        if (sb) {
-          const viewportHeight = sb.viewport.height;
-          const visibleEnd = sb.scrollTop + viewportHeight - 1;
-          if (newIndex > visibleEnd) {
-            sb.scrollTo(newIndex - viewportHeight + 1);
-          }
-        }
+        ensureVisible(newIndex);
         return newIndex;
       });
     }

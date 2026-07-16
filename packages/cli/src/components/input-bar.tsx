@@ -1,9 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { KeyBinding, TextareaRenderable } from "@opentui/core";
 import { useKeyboard, useRenderer } from "@opentui/react";
 import { EmptyBorder } from "./border";
-import { StatusBar } from "./status-bar";
+import { StatusBar, PLAN_COLOR } from "./status-bar";
 import { CommandMenu } from "./command-menu";
+import { MODELS, ACCENTS } from "./command-menu/commands";
 import type { Command, ModeType } from "./command-menu/types";
 import { useCommandMenu } from "./command-menu/use-command-menu";
 
@@ -16,11 +17,42 @@ export const TEXTAREA_KEY_BINDINGS: KeyBinding[] = [
   { name: "enter", shift: true, action: "newline" },
 ];
 
-export function InputBar() {
+const TOAST_MIN_DURATION_MS = 2500;
+const TOAST_MS_PER_CHAR = 60;
+
+type Props = {
+  onSubmit: (text: string) => void;
+  disabled?: boolean;
+};
+
+export function InputBar({ onSubmit, disabled = false }: Props) {
   // Ref = a direct handle to the textarea, for reading/clearing its text.
   const textareaRef = useRef<TextareaRenderable>(null);
   const [mode, setMode] = useState<ModeType>("Build");
+  const [model, setModel] = useState(MODELS[0]!);
+  const [accent, setAccent] = useState(ACCENTS[0]!.color);
   const renderer = useRenderer();
+
+  // Toast: a short-lived message in the status row. The ref remembers the
+  // pending timer so a new toast cancels the old one's cleanup.
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = (message: string) => {
+    setToast(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    // Longer messages stay up longer — scaled to reading time.
+    const duration = Math.max(
+      TOAST_MIN_DURATION_MS,
+      message.length * TOAST_MS_PER_CHAR,
+    );
+    toastTimer.current = setTimeout(() => setToast(null), duration);
+  };
+  // Clean the timer up if the component ever unmounts mid-toast.
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
 
   const {
     showCommandMenu,
@@ -32,12 +64,26 @@ export function InputBar() {
     setSelectedIndex,
   } = useCommandMenu();
 
-  // Global key listener: Tab toggles the mode (preventDefault stops the
-  // tab character from also being typed into the textarea).
+  // Global key listener. Tab toggles the mode (preventDefault stops the
+  // tab character from also being typed into the textarea). Ctrl+C clears
+  // a non-empty input; on an empty input it quits — needed because the
+  // renderer is created with exitOnCtrlC: false.
   useKeyboard((key) => {
+    if (disabled) return;
+
     if (key.name === "tab") {
       key.preventDefault();
       setMode((current) => (current === "Build" ? "Plan" : "Build"));
+    }
+
+    if (key.ctrl && key.name === "c") {
+      key.preventDefault();
+      const textarea = textareaRef.current;
+      if (textarea && textarea.plainText.length > 0) {
+        textarea.setText("");
+      } else {
+        renderer.destroy();
+      }
     }
   });
 
@@ -61,8 +107,11 @@ export function InputBar() {
         navigate: () => {},
         mode,
         setMode,
-        // No model registry yet — /models will use this later.
-        setModel: () => {},
+        model,
+        setModel,
+        accent,
+        setAccent,
+        toast: showToast,
       });
     } else {
       textarea.insertText(command.value + " ");
@@ -74,13 +123,16 @@ export function InputBar() {
   };
 
   const handleSubmit = () => {
+    if (disabled) return;
+
     const textarea = textareaRef.current;
     if (!textarea) return;
 
     const prompt = textarea.plainText.trim();
     if (prompt.length === 0) return;
 
-    // Later: send the prompt to the AI. For now, just clear the field.
+    // Hand the prompt up to App — in a later chapter this reaches the AI.
+    onSubmit(prompt);
     textarea.setText("");
   };
 
@@ -98,7 +150,7 @@ export function InputBar() {
     <box flexDirection="column">
       <box
         border={["left"]}
-        borderColor={mode === "Build" ? "#A855F7" : "#EF4444"}
+        borderColor={mode === "Build" ? accent : PLAN_COLOR}
         customBorderChars={{ ...EmptyBorder, vertical: "┃", bottomLeft: "╹" }}
         width="100%"
       >
@@ -123,6 +175,7 @@ export function InputBar() {
                 query={commandQuery}
                 selectedIndex={selectedIndex}
                 scrollRef={scrollRef}
+                accent={accent}
                 onSelect={setSelectedIndex}
                 onExecute={handleCommandExecute}
               />
@@ -138,13 +191,13 @@ export function InputBar() {
             placeholderColor="#6E6A7A"
             textColor="#F4F4F5"
             backgroundColor="#16151D"
-            cursorColor="#A855F7"
+            cursorColor={accent}
             maxHeight={6}
           />
         </box>
       </box>
       <box paddingX={1}>
-        <StatusBar mode={mode} />
+        <StatusBar mode={mode} model={model} accent={accent} toast={toast} />
       </box>
     </box>
   );

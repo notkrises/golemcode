@@ -14,6 +14,7 @@ type CommandMenuProps = {
   query: string;
   selectedIndex: number;
   scrollRef: RefObject<ScrollBoxRenderable | null>;
+  accent: string;
   onSelect: (index: number) => void;
   onExecute: (index: number) => void;
 };
@@ -22,6 +23,7 @@ export function CommandMenu({
   query,
   selectedIndex,
   scrollRef,
+  accent,
   onSelect,
   onExecute,
 }: CommandMenuProps) {
@@ -48,7 +50,7 @@ export function CommandMenu({
             paddingX={1}
             height={1}
             overflow="hidden"
-            backgroundColor={isSelected ? "#A855F7" : undefined}
+            backgroundColor={isSelected ? accent : undefined}
             onMouseMove={() => onSelect(i)}
             onMouseDown={() => onExecute(i)}
           >

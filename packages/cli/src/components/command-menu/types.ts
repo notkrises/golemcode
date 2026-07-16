@@ -10,7 +10,13 @@ export type CommandContext = {
   navigate: (path: string) => void;
   mode: ModeType;
   setMode: (mode: ModeType) => void;
+  model: SupportedChatModelId;
   setModel: (model: SupportedChatModelId) => void;
+  accent: string;
+  setAccent: (color: string) => void;
+  // Simplified stand-in for nightcode's toast provider: show a short
+  // transient message in the status row.
+  toast: (message: string) => void;
 };
 
 export type Command = {
